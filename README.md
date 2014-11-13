@@ -72,7 +72,7 @@ UIColor *myColour = [UIColor whiteColor];
 ## Code Organization
 
 Use `#pragma mark -` to categorize methods in functional groupings and protocol/delegate implementations following this general structure. Methods should be organized logically under their category.  For example, lifecycle methods should be organized according to the order in which they would be called at runtime.
-Use `#pragma mark` to subcategorize methods. This will be used if you have a group of methods which are `private` but also categorically related. Keep in mind, if you have too many methods categorically related, pulling them out into their own class and using Composition might be the best design.
+Use `#pragma mark` to subcategorize methods. This will be used if you have a group of methods which are categorically related. Keep in mind, if you have too many methods categorically related, pulling them out into their own class and using Composition might be the best design.
 
 ```objc
 #pragma mark - Lifecycle
@@ -92,11 +92,7 @@ Use `#pragma mark` to subcategorize methods. This will be used if you have a gro
 
 - (IBAction)submitData:(id)sender {}
 
-#pragma mark - Public
-
 - (void)publicMethod {}
-
-#pragma mark - Private
 
 - (void)privateMethod {}
 
@@ -148,11 +144,31 @@ else {
 * Prefer using auto-synthesis. But if necessary, `@synthesize` and `@dynamic` should each be declared on new lines in the implementation.
 * Colon-aligning method invocation should often be avoided.  There are cases where a method signature may have >= 3 colons and colon-aligning makes the code more readable. 
 
-**NOT SURE WHICH ONE YET.  STILL TALKING**
 **Preferred:**
 
 ```objc
-// blocks are easily readable
+- (void (^)())animationsWithFoo:(NSString *)foo;
+{
+    return ^{ ... // something to do with foo ); };
+}
+
+- (void)bar;
+{
+    NSString *foo = @"foo";
+    void (^animationsWithFoo)() = [self animationsWithFoo:foo];
+    void (^completionWithFoo)() = [self completionWithFoo:foo];
+    [UIView animateWithDuration:1.0
+                     animations:animationsWithFoo
+                     completion:^(BOOL finished) {
+					// something short
+				}
+    ];
+}
+```
+
+**Not Preferred:**
+
+```objc
 [UIView animateWithDuration:1.0 animations:^{
   // something
 } completion:^(BOOL finished) {
@@ -160,26 +176,13 @@ else {
 }];
 ```
 
-**Not Preferred:**
-
-```objc
-// colon-aligning makes the block indentation hard to read
-[UIView animateWithDuration:1.0
-                 animations:^{
-                     // something
-                 }
-                 completion:^(BOOL finished) {
-                     // something
-                 }];
-```
-
 ## Comments
 
 When they are needed, comments should be used to explain **why** a particular piece of code does something. Any comments that are used must be kept up-to-date or deleted. 
 
-Do not use a comment or a TODO to signify work remaining to be done. Instead, use `#pragma message("YourName: *link to jira which is tracking this work*")`
-It is important to link to Jira's to be sure the work is eventually completed. Comments alone are often lost in a big project.
-'
+- If we are adding reminder just for the feature branch, put it within a ```#ifndef DEBUG \n #error\n #endif``` block
+- If we have to add a task marker that will be merged to master, use the Jira ticket URL. For example, ```//YourName: Use new feature coming in a month (https://lumoslabs.atlassian.net/browse/ACTN-31)``` It is important to link to Jira to be sure the work is eventually completed. Comments alone are often lost in a big project.
+
 Block comments should generally be avoided, as code should be as self-documenting as possible, with only the need for intermittent, few-line explanations. *Exception: This does not apply to those comments used to generate documentation.*
 
 ## Naming
@@ -200,19 +203,29 @@ UIButton *settingsButton;
 UIButton *setBut;
 ```
 
-A three letter prefix should always be used for class names and constants, however may be omitted for Core Data entity names. For any official raywenderlich.com books, starter kits, or tutorials, the prefix 'RWT' should be used.
+A three letter prefix should always be used for class names and constants, however may be omitted for Core Data entity names.
 
-Constants should be camel-case with all words capitalized. If a constant is being exposed publically, it must be prefixed by the related class name for clarity.
+Constants should be camel-case with all words capitalized. If a constant is being exposed publically, it must be prefixed by the related class name for clarity. Use k prefix for file scope constants.
 
 **Preferred:**
+
 *If exposed publicly:*
+
+h file
 ```objc
-static NSTimeInterval const RWTTutorialViewControllerNavigationFadeAnimationDuration = 0.3;
+extern NSTimeInterval const RWTTutorialViewControllerNavigationFadeAnimationDuration;
+extern NSString * const RWTTutorialViewControllerNavigationName;
+```
+
+m file
+```objc
+NSTimeInterval const RWTTutorialViewControllerNavigationFadeAnimationDuration = 0.3;
+NSString * const RWTTutorialViewControllerNavigationName = @"name";
 ```
 
 *If privately declared:*
 ```objc
-static NSTimeInterval const fadetime = 1.7;
+static NSTimeInterval const kNavigationFadeAnimationDuration = 1.7;
 ```
 
 Properties should be camel-case with the leading word being lowercase. Use auto-synthesis for properties rather than manual @synthesize statements unless you have good reason.
@@ -315,6 +328,7 @@ Why? Even if you declared a property as `NSString` somebody might pass in an ins
 
 ```objc
 @property (copy, nonatomic) NSString *tutorialName;
+@property (strong, nonatomic) NSMutableString *tutorialName;
 ```
 
 **Not Preferred:**
@@ -331,38 +345,42 @@ Dot-notation should **always** be used for accessing and mutating properties, as
 
 **Preferred:**
 ```objc
-NSInteger arrayCount = [self.array count];
 view.backgroundColor = [UIColor orangeColor];
 [UIApplication sharedApplication].delegate;
 ```
 
 **Not Preferred:**
 ```objc
-NSInteger arrayCount = self.array.count;
 [view setBackgroundColor:[UIColor orangeColor]];
 UIApplication.sharedApplication.delegate;
 ```
 
 ## Literals
 
-`NSString`, `NSDictionary`, `NSArray`, and `NSNumber` literals should be used whenever creating immutable instances of those objects. Pay special care that `nil` values can not be passed into `NSArray` and `NSDictionary` literals, as this will cause a crash.
+`NSString`, `NSDictionary`, `NSArray`, and `NSNumber` literals should be used whenever creating immutable instances of those objects. Pay special care that `nil` values can not be passed into `NSArray` and `NSDictionary` literals, as this will cause a crash. Use subscript notation for access.
 
 **Preferred:**
 
 ```objc
 NSArray *names = @[@"Brian", @"Matt", @"Chris", @"Alex", @"Steve", @"Paul"];
-NSDictionary *productManagers = @{@"iPhone": @"Kate", @"iPad": @"Kamal", @"Mobile Web": @"Bill"};
+NSDictionary *productManagers = @{kIPhoneKey: @"Kate", kIPadKey: @"Kamal", kMobileWebKey: @"Bill"};
 NSNumber *shouldUseLiterals = @(YES);
 NSNumber *buildingStreetNumber = @(10018);
+
+NSString *productManagerForIPad = productManagers[kIPadKey];
+NSString *yourName = names[3];
 ```
 
 **Not Preferred:**
 
 ```objc
 NSArray *names = [NSArray arrayWithObjects:@"Brian", @"Matt", @"Chris", @"Alex", @"Steve", @"Paul", nil];
-NSDictionary *productManagers = [NSDictionary dictionaryWithObjectsAndKeys: @"Kate", @"iPhone", @"Kamal", @"iPad", @"Bill", @"Mobile Web", nil];
+NSDictionary *productManagers = [NSDictionary dictionaryWithObjectsAndKeys: @"Kate", kIPhoneKey, @"Kamal", kIPadKey, @"Bill", kMobileWebKey, nil];
 NSNumber *shouldUseLiterals = [NSNumber numberWithBool:YES];
 NSNumber *buildingStreetNumber = [NSNumber numberWithInteger:10018];
+
+NSString *productManagerForIPad = [productManagers objectForKey:kIPadKey];
+NSString *yourName = [names objectAtIndex:3] ;
 ```
 
 ## Constants
@@ -371,10 +389,16 @@ Constants are preferred over in-line string literals or numbers, as they allow f
 
 **Preferred:**
 
+h file
 ```objc
-static NSString * const RWTAboutViewControllerCompanyName = @"RayWenderlich.com";
+extern NSString * const RWTAboutViewControllerCompanyName;
+```
 
-static CGFloat const RWTImageThumbnailHeight = 50.0;
+m file
+```objc
+NSString * const RWTAboutViewControllerCompanyName = @"RayWenderlich.com";
+
+static CGFloat const kImageThumbnailHeight = 50.0;
 ```
 
 **Not Preferred:**
@@ -388,6 +412,8 @@ static CGFloat const RWTImageThumbnailHeight = 50.0;
 ## Enumerated Types
 
 When using `enum`s, it is recommended to use the new fixed underlying type specification because it has stronger type checking and code completion. The SDK now includes a macro to facilitate and encourage use of fixed underlying types: `NS_ENUM()`
+
+Use NS_OPTIONS for bitwise flags.
 
 **For Example:**
 
